@@ -1,0 +1,59 @@
+{
+  "name": "remote-link-hub",
+  "version": "1.0.0",
+  "description": "LAN-first remote link hub for desktop and mobile",
+  "main": "desktop-main.js",
+  "scripts": {
+    "start": "node server.js",
+    "desktop": "electron .",
+    "make-icon": "node scripts/generate-icon.js",
+    "dist": "npm run make-icon && electron-builder --win nsis"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1",
+    "multer": "^2.1.1",
+    "pngjs": "^7.0.0",
+    "qrcode": "^1.5.4",
+    "ws": "^8.20.0"
+  },
+  "devDependencies": {
+    "electron": "^41.0.3",
+    "electron-builder": "^26.8.1"
+  },
+  "build": {
+    "appId": "com.remote-link.hub",
+    "productName": "Remote Link Hub",
+    "asar": true,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "desktop-main.js",
+      "desktop-preload.js",
+      "server.js",
+      "public/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}

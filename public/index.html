@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Remote Link Hub</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">LAN First Remote Link</p>
+          <h1>手机与电脑的实时互联面板</h1>
+          <p class="subtitle">
+            在同一局域网下，用手机浏览器直接连接本机，完成消息互通、剪贴板同步和文件投递。
+          </p>
+        </div>
+        <div class="badge-row">
+          <span class="badge" id="role-badge">等待识别角色</span>
+          <span class="badge muted" id="status-badge">正在初始化</span>
+        </div>
+      </header>
+
+      <main class="grid">
+        <section class="panel panel-accent">
+          <div class="panel-head">
+            <h2>连接</h2>
+            <button id="refresh-button" class="ghost">刷新状态</button>
+          </div>
+          <div class="meta-list">
+            <div>
+              <span>房间</span>
+              <strong id="room-id">-</strong>
+            </div>
+            <div>
+              <span>桌面地址</span>
+              <strong id="desktop-url">-</strong>
+            </div>
+            <div>
+              <span>手机地址</span>
+              <strong id="mobile-url">-</strong>
+            </div>
+            <div>
+              <span>Tailscale 远程地址</span>
+              <strong id="remote-url">-</strong>
+            </div>
+            <div>
+              <span>Tailscale 状态</span>
+              <strong id="tailscale-state">-</strong>
+            </div>
+          </div>
+          <div class="qr-wrap" id="qr-wrap">
+            <img id="qr-image" alt="mobile qr code" />
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>设备</h2>
+            <span class="helper">在线终端</span>
+          </div>
+          <ul id="device-list" class="stack-list"></ul>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>消息</h2>
+            <span class="helper">双端即时通信</span>
+          </div>
+          <form id="message-form" class="composer">
+            <input id="message-input" name="message" maxlength="300" placeholder="输入消息后发送到另一端" />
+            <button type="submit">发送</button>
+          </form>
+          <ul id="message-list" class="stack-list scroll-list"></ul>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>共享剪贴板</h2>
+            <span class="helper">文本双向同步</span>
+          </div>
+          <form id="clipboard-form" class="column-form">
+            <textarea id="clipboard-input" rows="6" placeholder="粘贴文本后点击同步"></textarea>
+            <div class="action-row">
+              <button type="submit">同步到房间</button>
+              <button type="button" class="ghost" id="copy-clipboard-button">复制到当前设备</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>文件投递</h2>
+            <span class="helper">手机上传到本机</span>
+          </div>
+          <form id="upload-form" class="column-form">
+            <input id="file-input" name="file" type="file" />
+            <button type="submit">上传文件</button>
+          </form>
+          <ul id="file-list" class="stack-list scroll-list"></ul>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>远程控制</h2>
+            <span class="helper">手机触发桌面动作</span>
+          </div>
+          <ul id="control-list" class="stack-list"></ul>
+        </section>
+      </main>
+    </div>
+
+    <template id="empty-template">
+      <li class="empty-state">暂时还没有内容</li>
+    </template>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

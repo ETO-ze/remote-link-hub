@@ -1,0 +1,265 @@
+:root {
+  --bg: #f2ece4;
+  --panel: rgba(255, 250, 244, 0.82);
+  --panel-border: rgba(63, 42, 24, 0.12);
+  --text: #2e241d;
+  --muted: #766659;
+  --accent: #0f7b6c;
+  --accent-soft: #dbf2ec;
+  --shadow: 0 22px 48px rgba(60, 44, 28, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Segoe UI", "PingFang SC", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top left, rgba(234, 170, 92, 0.32), transparent 24rem),
+    radial-gradient(circle at bottom right, rgba(15, 123, 108, 0.18), transparent 24rem),
+    linear-gradient(160deg, #f7f1ea 0%, #efe7dc 100%);
+}
+
+.shell {
+  width: min(1180px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 2rem 0 3rem;
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.45rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.75rem;
+}
+
+h1,
+h2,
+strong {
+  font-family: Georgia, "Noto Serif SC", serif;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  line-height: 1.05;
+}
+
+.subtitle {
+  max-width: 56rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.badge-row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--panel-border);
+  font-size: 0.92rem;
+  box-shadow: var(--shadow);
+}
+
+.badge.muted {
+  color: var(--muted);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 24px;
+  padding: 1rem;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+}
+
+.panel-accent {
+  background: linear-gradient(135deg, rgba(15, 123, 108, 0.92), rgba(17, 73, 76, 0.88));
+  color: #effcf8;
+}
+
+.panel-accent .helper,
+.panel-accent span,
+.panel-accent .ghost {
+  color: inherit;
+}
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.panel-head h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.helper {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.meta-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.meta-list div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.meta-list span {
+  font-size: 0.88rem;
+  opacity: 0.82;
+}
+
+.meta-list strong {
+  font-size: 0.96rem;
+  word-break: break-all;
+}
+
+.qr-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+}
+
+.qr-wrap img {
+  width: min(100%, 240px);
+  border-radius: 14px;
+  background: #fff;
+  padding: 0.5rem;
+}
+
+.stack-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.stack-list li {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.scroll-list {
+  max-height: 20rem;
+  overflow: auto;
+}
+
+.composer,
+.column-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.action-row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+input,
+textarea,
+button {
+  font: inherit;
+}
+
+input,
+textarea {
+  width: 100%;
+  border: 1px solid rgba(63, 42, 24, 0.14);
+  border-radius: 14px;
+  padding: 0.9rem 1rem;
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--text);
+}
+
+button {
+  border: none;
+  border-radius: 14px;
+  padding: 0.9rem 1.1rem;
+  cursor: pointer;
+  background: var(--accent);
+  color: #f7fffd;
+  transition: transform 0.18s ease, opacity 0.18s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+  opacity: 0.94;
+}
+
+.ghost {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: var(--text);
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--muted);
+}
+
+a {
+  color: var(--accent);
+}
+
+small {
+  color: var(--muted);
+}
+
+@media (max-width: 860px) {
+  .hero {
+    flex-direction: column;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .shell {
+    width: min(100% - 1rem, 100%);
+    padding-top: 1rem;
+  }
+}
