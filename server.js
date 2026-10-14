@@ -11,11 +11,16 @@ const { WebSocketServer } = require("ws");
 
 function createRemoteLinkServer(options = {}) {
   const app = express();
-  const port = Number(options.port || process.env.PORT || 4399);
+  const port = Number(options.port ?? process.env.PORT ?? 4399);
+  let listeningPort = port;
   const baseDir = options.baseDir || __dirname;
   const uploadsDir = options.uploadsDir || path.join(baseDir, "uploads");
   const publicDir = options.publicDir || path.join(baseDir, "public");
   const desktopController = options.desktopController || {};
+  const maxUploadBytes = options.maxUploadBytes ?? 25 * 1024 * 1024;
+  if (!Number.isSafeInteger(maxUploadBytes) || maxUploadBytes < 1) {
+    throw new TypeError("maxUploadBytes must be a positive integer.");
+  }
 
   fs.mkdirSync(uploadsDir, { recursive: true });
 
@@ -32,16 +37,69 @@ function createRemoteLinkServer(options = {}) {
   const storage = multer.diskStorage({
     destination: (_req, _file, callback) => callback(null, uploadsDir),
     filename: (_req, file, callback) => {
-      const safeBase = path.basename(file.originalname).replace(/[^a-zA-Z0-9._-]/g, "_");
-      callback(null, `${Date.now()}-${safeBase}`);
+      const safeBase = path.basename(file.originalname).replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120);
+      callback(null, `${crypto.randomUUID()}-${safeBase}`);
     },
   });
 
-  const upload = multer({ storage });
+  const upload = multer({
+    storage,
+    limits: { fileSize: maxUploadBytes, files: 1, fields: 2, parts: 4, fieldSize: 1024 },
+  });
+
+  // Every privileged request needs the token, including requests from localhost
+  // or a reverse proxy. Neither the peer address nor forwarding headers grant access.
+  function hasValidToken(token) {
+    return typeof token === "string" && Buffer.byteLength(token) === state.accessToken.length &&
+      crypto.timingSafeEqual(Buffer.from(token), Buffer.from(state.accessToken));
+  }
+
+  function bearerToken(req) {
+    const match = /^Bearer ([a-f0-9]+)$/i.exec(req.headers.authorization || "");
+    return match ? match[1] : "";
+  }
+
+  function requireToken(req, res, next) {
+    if (!hasValidToken(bearerToken(req))) {
+      return res.status(401).json({ error: "Invalid token. Use the current connection URL from the desktop app or console." });
+    }
+    next();
+  }
+
+  app.use((_req, res, next) => {
+    res.set("Referrer-Policy", "no-referrer");
+    res.set("X-Content-Type-Options", "nosniff");
+    next();
+  });
+  app.use(["/api", "/uploads"], (_req, res, next) => {
+    res.set("Cache-Control", "no-store");
+    next();
+  });
 
   app.use(express.json({ limit: "2mb" }));
   app.use(express.urlencoded({ extended: true }));
-  app.use("/uploads", express.static(uploadsDir));
+  // Uploaded HTML/SVG must never execute in the application's origin.
+  app.use("/uploads", requireToken);
+  app.get("/uploads/:filename", (req, res, next) => {
+    const filename = req.params.filename;
+    if (filename !== path.basename(filename) || filename.includes("\\") || filename.startsWith(".")) {
+      return res.status(400).json({ error: "Invalid filename." });
+    }
+    const record = state.files.find((file) => file.savedName === filename);
+    res.set("Content-Type", "application/octet-stream");
+    res.set("Content-Security-Policy", "sandbox; default-src 'none'");
+    res.download(filename, record?.originalName || filename, {
+      root: path.resolve(uploadsDir),
+      dotfiles: "deny",
+      cacheControl: false,
+    }, (error) => {
+      if (error && !res.headersSent) {
+        res.status(error.statusCode === 404 ? 404 : 500).json({ error: "Unable to download file." });
+      } else if (error) {
+        next(error);
+      }
+    });
+  });
   app.use(express.static(publicDir));
 
   function getLanAddress() {
@@ -125,30 +183,20 @@ function createRemoteLinkServer(options = {}) {
     }
   }
 
-  function isLocalRequest(req) {
-    const forwarded = req.headers["x-forwarded-for"];
-    const remoteAddress = forwarded || req.socket.remoteAddress || "";
-    return (
-      remoteAddress.includes("127.0.0.1") ||
-      remoteAddress.includes("::1") ||
-      remoteAddress.includes("::ffff:127.0.0.1")
-    );
-  }
-
   function getUrls() {
     const lanAddress = getLanAddress();
     const tailscale = getTailscaleInfo();
     const tailscaleBaseUrl = tailscale.ipv4
-      ? `http://${tailscale.ipv4}:${port}`
+      ? `http://${tailscale.ipv4}:${listeningPort}`
       : tailscale.magicDnsName
-        ? `http://${tailscale.magicDnsName}:${port}`
+        ? `http://${tailscale.magicDnsName}:${listeningPort}`
         : null;
 
     return {
       lanAddress,
       tailscale,
-      desktopUrl: `http://localhost:${port}`,
-      mobileUrl: `http://${lanAddress}:${port}/?role=mobile&token=${state.accessToken}`,
+      desktopUrl: `http://localhost:${listeningPort}/?role=desktop&token=${state.accessToken}`,
+      mobileUrl: `http://${lanAddress}:${listeningPort}/?role=mobile&token=${state.accessToken}`,
       remoteUrl: tailscaleBaseUrl
         ? `${tailscaleBaseUrl}/?role=mobile&token=${state.accessToken}`
         : null,
@@ -250,13 +298,13 @@ function createRemoteLinkServer(options = {}) {
 
   app.get("/api/bootstrap", async (req, res) => {
     const { role = "desktop", token = "" } = req.query;
-    const urls = getUrls();
-
-    if (!isLocalRequest(req) && token !== state.accessToken) {
+    if (!hasValidToken(bearerToken(req) || token)) {
       return res.status(401).json({
-        error: "Unauthorized request. Please use the mobile URL from the desktop page or console.",
+        error: "Unauthorized request. Use the current connection URL from the desktop app or console.",
       });
     }
+
+    const urls = getUrls();
 
     const qrDataUrl = await QRCode.toDataURL(urls.mobileUrl, {
       margin: 1,
@@ -273,11 +321,8 @@ function createRemoteLinkServer(options = {}) {
     });
   });
 
-  app.post("/api/upload", upload.single("file"), (req, res) => {
-    const { token = "", deviceName = "Unknown device" } = req.body;
-    if (token !== state.accessToken) {
-      return res.status(401).json({ error: "Invalid token." });
-    }
+  app.post("/api/upload", requireToken, upload.single("file"), (req, res) => {
+    const { deviceName = "Unknown device" } = req.body || {};
 
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded." });
@@ -307,12 +352,17 @@ function createRemoteLinkServer(options = {}) {
   });
 
   app.get("/api/health", (_req, res) => {
-    res.json({
-      ok: true,
-      ...getUrls(),
-      roomId: state.roomId,
-      devices: state.devices.size,
-    });
+    res.json({ ok: true });
+  });
+
+  app.use((error, _req, res, next) => {
+    if (res.headersSent) return next(error);
+    if (error instanceof multer.MulterError) {
+      return res.status(error.code === "LIMIT_FILE_SIZE" ? 413 : 400).json({
+        error: error.code === "LIMIT_FILE_SIZE" ? "File exceeds the upload size limit." : "Invalid multipart upload.",
+      });
+    }
+    return res.status(500).json({ error: "Request failed." });
   });
 
   const server = http.createServer(app);
@@ -331,9 +381,14 @@ function createRemoteLinkServer(options = {}) {
         return;
       }
 
+      if (!data || typeof data !== "object" || Array.isArray(data)) {
+        socket.send(JSON.stringify({ type: "error", payload: "Invalid message payload." }));
+        return;
+      }
+
       if (data.type === "hello") {
         const { token, role = "desktop", deviceName = "Unknown device", runtime = "browser" } = data.payload || {};
-        if (token !== state.accessToken) {
+        if (!hasValidToken(token)) {
           socket.send(JSON.stringify({ type: "error", payload: "Authentication failed." }));
           socket.close();
           return;
@@ -442,8 +497,11 @@ function createRemoteLinkServer(options = {}) {
   });
 
   function listen() {
-    return new Promise((resolve) => {
-      server.listen(port, () => {
+    return new Promise((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(port, options.host, () => {
+        server.removeListener("error", reject);
+        listeningPort = server.address().port;
         const urls = getUrls();
         console.log("");
         console.log("Remote Link Hub is running.");

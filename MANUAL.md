@@ -32,16 +32,12 @@ Remote Link Hub is a Windows desktop and mobile remote interconnect tool for:
 ## Local Development
 
 ```powershell
-cd C:\Users\Administrator\Documents\Playground\remote-link-hub
+cd remote-link-hub
 npm.cmd install
 npm.cmd start
 ```
 
-Desktop browser entry:
-
-```text
-http://localhost:4399
-```
+Open the complete `Desktop` URL printed by the server, including its per-start token. A bare `http://localhost:4399` URL can load the page but cannot initialize the room. Electron passes the token automatically. Keep connection URLs and QR codes private.
 
 ## Windows Desktop App
 
@@ -79,11 +75,7 @@ Build outputs:
 3. Start Remote Link Hub on the desktop.
 4. On the phone, open the `Tailscale 远程地址` shown in the desktop UI.
 
-Current verified desktop Tailscale IP in this environment:
-
-```text
-100.104.255.57
-```
+Use the Tailscale address detected on your own machine. Do not directly expose the HTTP service to the public internet; use a trusted encrypted tunnel or an appropriately configured HTTPS/WSS deployment.
 
 ## Remote Controls
 
@@ -98,28 +90,20 @@ The mobile UI currently supports:
 
 - Browser mode stores uploads in the local project `uploads` folder
 - Electron desktop mode stores uploads under the app user-data folder
+- Uploads require an `Authorization: Bearer <token>` header before multipart parsing; a token in the form body alone is no longer accepted
+- The default limit is one file per request and 25 MiB per file; rejected multipart uploads are cleaned up
+- Downloads under `/uploads/:filename` require the same header and are served as attachments, including HTML/SVG; use the updated UI to download
+- The limit is per request, not a total storage quota; manage old files on the host as needed
 
 ## Windows RDP via Tailscale
 
-This machine has RDP enabled and listening on port `3389`.
+RDP is a separate Windows feature, not configured by this application. If you choose to use it, configure Windows and tailnet access controls yourself and connect using your own machine address and account. Never publish machine credentials or assume RDP is enabled.
 
-Use a phone RDP client like Microsoft Windows App and connect to:
+## Security Migration and Tests
 
-```text
-100.104.255.57
-```
+See [the README security notes](README.md#安全与兼容性变更) for API migration, token handling, test commands, and verification limits. `/api/health` now returns only liveness. Every bootstrap request needs a token, including loopback and proxy requests.
 
-Username:
-
-```text
-Administrator
-```
-
-Or:
-
-```text
-WIN-4QA328LBHF6\Administrator
-```
+These source changes do not update an existing deployment or EXE. Rebuild/restart separately after review to apply the changes.
 
 ## GitHub Publishing
 
