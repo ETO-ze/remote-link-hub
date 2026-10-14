@@ -4,6 +4,7 @@
   "description": "LAN-first remote link hub for desktop and mobile",
   "main": "desktop-main.js",
   "scripts": {
+    "test": "node --test",
     "start": "node server.js",
     "desktop": "electron .",
     "make-icon": "node scripts/generate-icon.js",

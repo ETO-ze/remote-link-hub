@@ -97,7 +97,7 @@ function renderFiles(files) {
     .map(
       (file) => `
         <li>
-          <a href="${file.url}" target="_blank" rel="noreferrer">${escapeHtml(file.originalName)}</a>
+          <a href="${escapeHtml(file.url)}" data-download-name="${escapeHtml(file.originalName)}">${escapeHtml(file.originalName)}</a>
           <span>${escapeHtml(file.uploadedBy)}</span>
           <small>${prettySize(file.size)} · ${formatTime(file.uploadedAt)}</small>
         </li>
@@ -190,11 +190,10 @@ function connectSocket() {
 async function bootstrap() {
   const query = new URLSearchParams();
   query.set("role", appState.role);
-  if (appState.accessToken) {
-    query.set("token", appState.accessToken);
-  }
-
-  const response = await fetch(`/api/bootstrap?${query.toString()}`);
+  const response = await fetch(`/api/bootstrap?${query.toString()}`, {
+    headers: { Authorization: `Bearer ${appState.accessToken}` },
+    cache: "no-store",
+  });
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
     throw new Error(payload.error || "Unable to bootstrap.");
@@ -266,21 +265,47 @@ ui.uploadForm.addEventListener("submit", async (event) => {
 
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("token", appState.accessToken);
   formData.append("deviceName", appState.deviceName);
 
   const response = await fetch("/api/upload", {
     method: "POST",
+    headers: { Authorization: `Bearer ${appState.accessToken}` },
     body: formData,
   });
 
   if (!response.ok) {
-    setStatus("文件上传失败", false);
+    const payload = await response.json().catch(() => ({}));
+    setStatus(`文件上传失败: ${payload.error || response.status}`, false);
     return;
   }
 
   ui.uploadForm.reset();
   setStatus("文件上传成功", false);
+});
+
+ui.fileList.addEventListener("click", async (event) => {
+  const link = event.target.closest("a[data-download-name]");
+  if (!link) return;
+  event.preventDefault();
+  let blobUrl;
+  try {
+    const response = await fetch(link.getAttribute("href"), {
+      headers: { Authorization: `Bearer ${appState.accessToken}` },
+      cache: "no-store",
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    blobUrl = URL.createObjectURL(await response.blob());
+    const download = document.createElement("a");
+    download.href = blobUrl;
+    download.download = link.getAttribute("data-download-name");
+    document.body.appendChild(download);
+    download.click();
+    download.remove();
+  } catch (_error) {
+    setStatus("文件下载失败，请重新连接后重试", false);
+  } finally {
+    if (blobUrl) window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+  }
 });
 
 ui.controlList.addEventListener("click", (event) => {

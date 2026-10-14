@@ -21,7 +21,9 @@ function createWindow() {
     },
   });
 
-  mainWindow.loadURL("http://localhost:4399/?role=desktop&name=Windows%20Desktop%20App");
+  const desktopUrl = new URL(serverHandle.getUrls().desktopUrl);
+  desktopUrl.searchParams.set("name", "Windows Desktop App");
+  mainWindow.loadURL(desktopUrl.toString());
 }
 
 async function startDesktopApp() {
